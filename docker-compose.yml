@@ -35,8 +35,9 @@ services:
       - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,z
       - elasticsearch:/usr/share/elasticsearch/data:z
     ports:
-      - "9200:9200"
-      - "9300:9300"
+        # map to random host ports instead of static ports, eg. 32000:9200
+      - '9200'
+      - '9300'
     environment:
       ES_JAVA_OPTS: -Xms512m -Xmx512m
       # Bootstrap password.
@@ -45,7 +46,17 @@ services:
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-}
       # Use single node discovery in order to disable production mode and avoid bootstrap checks.
       # see: https://www.elastic.co/guide/en/elasticsearch/reference/current/bootstrap-checks.html
-      discovery.type: single-node
+      # discovery.type: single-node
+      # Disable single-node discovery.
+      discovery.type: 'multi-node'
+      # Force publishing on the 'elk' overlay.
+      network.publish_host: _eth0_
+      # Set a predictable node name.
+      node.name: elk_elasticsearch.{{.Task.Slot}}
+      # Use internal Docker round-robin DNS for unicast discovery.
+      discovery.seed_hosts: tasks.elasticsearch
+      # Define initial masters, assuming a cluster size of at least 3.
+      cluster.initial_master_nodes: elk_elasticsearch.1,elk_elasticsearch.2,elk_elasticsearch.3
     networks:
       - elk
 
